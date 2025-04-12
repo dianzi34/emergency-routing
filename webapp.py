@@ -46,9 +46,6 @@ with st.sidebar:
     # st.write(address_to)
 
 
-
-
-
 # ====== MAIN PAGE ======
 
 
@@ -116,6 +113,9 @@ if map_data and map_data.get("last_clicked"):
         st.info("Wait for few seconds until the nearest hospital is found.")
         # Add a new marker to session state
         st.session_state.markers = []
+
+
+        
         # ===================
         graph, location_orig, location_dest, hospitals_coordinates, hospital_name = get_graph((lat, lon), 10000)
         st.session_state.markers.append({
@@ -142,6 +142,10 @@ if map_data and map_data.get("last_clicked"):
 
         
         # ===================
+
+
+
+
         # Update map center in session state
         st.session_state.map_center = (lat, lon)
         # Rerun the app to update the map immediately
@@ -150,44 +154,3 @@ if map_data and map_data.get("last_clicked"):
         st.warning("Address not found for this location.")
 else:
     st.info("Click on the map to get the address of that location.")
-
-
-
-
-
-
-
-
-# ===================
-# if address_from and address_to:
-
-#     # === FIND THE PATH ===
-#     graph, location_orig, location_dest = get_graph(address_from, address_to)
-#     # = Alternative options (mode='place' seems to be the fastest) =
-#     #graph, location_orig, location_dest = get_graph_from_mode(address_from, address_to, mode="place", city="Manhattan")
-#     #graph, location_orig, location_dest = get_graph_from_mode(address_from, address_to, mode="address", dist=3000)
-
-#     # Search information 
-#     st.markdown(f'**From**: {address_from}')
-#     st.markdown(f'**To**: {address_to}')
-#     st.write(graph)
-
-#     # re-center
-#     leafmap.Map(center=location_orig, zoom=16)
-
-#     # find the nearest node to the start location
-#     m.add_marker(location=list(location_orig), icon=folium.Icon(color='red', icon='suitcase', prefix='fa'))
-#     m.add_marker(location=list(location_dest), icon=folium.Icon(color='green', icon='street-view', prefix='fa'))
-
-#     # find the shortest path
-#     route = find_shortest_path(graph, location_orig, location_dest, optimizer)
-
-#     osmnx.plot_route_folium(graph, route, m)
-
-# else:
-
-#     m.add_marker(location=(lat, lon), popup=f"lat, lon: {lat}, {lon}", icon=folium.Icon(color='green', icon='eye', prefix='fa'))
-#     st.write(f"Lat, Lon: {lat}, {lon}")
-
-
-# m.to_streamlit()
