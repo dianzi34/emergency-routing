@@ -37,13 +37,13 @@ with st.sidebar:
     # transport = st.selectbox("Choose transport", TRAVEL_MODE)
     optimizer = st.selectbox("Choose optimizer", TRAVEL_OPTIMIZER)
 
-    # direction_mode = st.selectbox("Choose direction mode", DIRECTION_MODE)
+    #TODO: intergrate the emergency and availability options
+    emergency = st.toggle("Emergency?", value=False)
+    availability = st.toggle("Check Availability?", value=False)
 
-    # address_from = st.text_input("Go from", key="go_from")
-    # address_to = st.text_input("Go to", key="go_to")
-    
-    # st.button("Clear all address boxes", on_click=clear_text)
-    # st.write(address_to)
+    # TODO: show all the hospitals markers
+
+    radius = st.slider("Search radius (in meters)", min_value=10000, max_value=50000, value=10000, step=1000)
 
 
 # ====== MAIN PAGE ======
@@ -115,9 +115,9 @@ if map_data and map_data.get("last_clicked"):
         st.session_state.markers = []
 
 
-        
+
         # ===================
-        graph, location_orig, location_dest, hospitals_coordinates, hospital_name = get_graph((lat, lon), 10000)
+        graph, location_orig, location_dest, hospitals_coordinates, hospital_name = get_graph((lat, lon), radius)
         st.session_state.markers.append({
             'name': location.address,
             'location': location_orig,
