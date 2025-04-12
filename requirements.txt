@@ -1,0 +1,6 @@
+streamlit~=1.44.1
+streamlit-folium~=0.24.1
+geopy~=2.4.1
+leafmap~=0.43.5
+osmnx~=2.0.2
+networkx~=3.2.1
