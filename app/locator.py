@@ -126,7 +126,9 @@ def get_graph(geo_orig, radius):
     location_orig = geo_orig
     hospitals = get_nearby_hospitals(location_orig[0], location_orig[1], radius=radius)
     hospital_points = get_location_from_hospitals(hospitals)
-    hospitals_coordinates = [hospital['geometry'] for hospital in hospital_points]
+    # keep the dict of hospitals point instead only extract geometry
+    # hospitals_coordinates = [hospital['geometry'] for hospital in hospital_points]
+    hospitals_coordinates = hospital_points
     location_dest, hospital_name = get_nearest_hospital(hospital_points, location_orig)
 
     print(f'Location orig: {location_orig}')

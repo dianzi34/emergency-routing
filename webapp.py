@@ -25,46 +25,67 @@ st.set_page_config(page_title="🚋 Route finder", layout="wide")
 
 # ====== SIDEBAR ======
 with st.sidebar:
-
     st.title("Choose you travel settings")
 
     st.markdown("A simple app that finds and displays the shortest path between two points on a map.")
 
     basemap = st.selectbox("Choose basemap", BASEMAPS)
     if basemap in BASEMAPS[:-1]:
-        basemap=basemap.upper()
+        basemap = basemap.upper()
 
     # transport = st.selectbox("Choose transport", TRAVEL_MODE)
     optimizer = st.selectbox("Choose optimizer", TRAVEL_OPTIMIZER)
 
-    #TODO: intergrate the emergency and availability options
+    # TODO: intergrate the emergency and availability options
     emergency = st.toggle("Emergency?", value=False)
     availability = st.toggle("Check Availability?", value=False)
 
     # TODO: show all the hospitals markers
-
     radius = st.slider("Search radius (in meters)", min_value=10000, max_value=50000, value=10000, step=1000)
-
 
 # ====== MAIN PAGE ======
 
 
-
 # Define the initial coordinates for the map (e.g., San Francisco)
 neu_sv = (37.33765749541021, -121.88963941434811)
+
 
 # Initialize session state variables
 if 'markers' not in st.session_state:
     st.session_state.markers = []
 if 'map_center' not in st.session_state:
     st.session_state.map_center = neu_sv
+if 'map_initialized' not in st.session_state:
+    st.session_state.map_initialized = False
+
+
+# new-added:Initialize the default hospital display (can be displayed without clicking on the map)
+if 'last_radius' not in st.session_state:
+    st.session_state.last_radius = radius
+
+if radius != st.session_state.last_radius:
+    # radius changed, update graph
+    graph, location_orig, location_dest, hospitals_coordinates, hospital_name = get_graph(neu_sv, radius)
+    st.session_state.markers = []
+    for hospital_point in hospitals_coordinates:
+        name = hospital_point.get('name', 'Unnamed')
+        geom = hospital_point['geometry']
+        st.session_state.markers.append({
+            'name': name,
+            'location': (geom.y, geom.x),
+            'icon': folium.Icon(color='blue', icon='plus', prefix='fa')
+        })
+    st.session_state.last_radius = radius
+    st.session_state.map_center = neu_sv
+    st.session_state.map_initialized = True
+
 
 if 'default_mark' not in st.session_state:
     st.session_state.default_mark = []
     st.session_state.default_mark.append({
-            'location': neu_sv,
-            'icon': folium.Icon(color='green', icon='eye', prefix='fa')
-        })
+        'location': neu_sv,
+        'icon': folium.Icon(color='green', icon='eye', prefix='fa')
+    })
 if 'route_path' not in st.session_state:
     st.session_state.route_path = None
 
@@ -82,12 +103,9 @@ for marker in st.session_state.markers:
     lon = marker['location'][1];
     st.success(f"📫 Name/Address: {marker['name']}")
     st.write(f"📍 Coordinates: ({lat:.5f}, {lon:.5f})")
-    
 
 if st.session_state.route_path is not None:
     st.session_state.route_path.explore(m=m)
-
-    
 
 # Display the map in the Streamlit app and capture click events
 map_data = m.to_streamlit(height=500, bidirectional=True)
@@ -106,15 +124,11 @@ if map_data and map_data.get("last_clicked"):
     # Perform reverse geocoding to get the address
     location = geolocator.reverse((lat, lon), exactly_one=True)
 
-    
-
     if location:
         st.success(f"📫 Address: {location.address}")
         st.info("Wait for few seconds until the nearest hospital is found.")
         # Add a new marker to session state
         st.session_state.markers = []
-
-
 
         # ===================
         graph, location_orig, location_dest, hospitals_coordinates, hospital_name = get_graph((lat, lon), radius)
@@ -128,6 +142,17 @@ if map_data and map_data.get("last_clicked"):
             'location': location_dest,
             'icon': folium.Icon(color='green', icon='street-view', prefix='fa')
         })
+
+        # new-added:show all the hospitals markers within the radius
+        for hospital_point in hospitals_coordinates:
+            name = hospital_point.get('name', 'Unnamed')
+            geom = hospital_point['geometry']
+            st.session_state.markers.append({
+                'name': name,
+                'location': (geom.y, geom.x),
+                'icon': folium.Icon(color='blue', icon='plus', prefix='fa')
+            })
+
         # m.add_marker(location=list(location_orig), icon=folium.Icon(color='red', icon='suitcase', prefix='fa'))
         # m.add_marker(location=list(location_dest), icon=folium.Icon(color='green', icon='street-view', prefix='fa'))
 
@@ -140,11 +165,7 @@ if map_data and map_data.get("last_clicked"):
         st.session_state.route_path = route_path
         # route_path.explore(m=m)
 
-        
         # ===================
-
-
-
 
         # Update map center in session state
         st.session_state.map_center = (lat, lon)
