@@ -67,6 +67,13 @@ if radius != st.session_state.last_radius:
     # radius changed, update graph
     graph, location_orig, location_dest, hospitals_coordinates, hospital_name = get_graph(neu_sv, radius)
     st.session_state.markers = []
+
+    # fix the start maker miss issue when drag the radius
+    st.session_state.markers.append({
+        'name': 'You are here',
+        'location': (location_orig[0], location_orig[1]),
+        'icon': folium.Icon(color='red', icon='suitcase', prefix='fa')  # 或 icon='flag'
+    })
     for hospital_point in hospitals_coordinates:
         name = hospital_point.get('name', 'Unnamed')
         geom = hospital_point['geometry']
