@@ -46,7 +46,7 @@ Start the Streamlit application with the following command:
 
 
 ```bash
-streamlit run app.py
+streamlit run webapp.py
 ```
 
 
