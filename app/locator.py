@@ -3,6 +3,7 @@ import networkx as nx
 
 from typing import Tuple, List
 from networkx.classes.multidigraph import MultiDiGraph
+from osmnx._errors import InsufficientResponseError
 
 
 # get all hospitals in the area with bounding box
@@ -26,12 +27,16 @@ def get_nearby_hospitals(lat, lon, radius=1000, emergency=None):
         tags['emergency'] = 'no'
 
     # Retrieve hospital geometries within the specified radius
-    hospitals = osmnx.features_from_point((lat, lon), tags=tags, dist=radius)
+    try:
+        hospitals = osmnx.features_from_point((lat, lon), tags=tags, dist=radius)
+        return hospitals
+    except InsufficientResponseError:
+        print(f"⚠️ No hospital features found within {radius}m of ({lat}, {lon})")
+        return None
 
     # Extract hospital names
     # hospital_names = hospitals['name'].dropna().unique().tolist()
-
-    return hospitals
+    # return hospitals
 
 # get the name of the hospital
 def get_hospital_name(hospitals):
@@ -58,7 +63,7 @@ def get_hospital_name(hospitals):
 
 # get the location of each hospital
 def get_location_from_hospitals(hospitals) -> Tuple[float, float]:
-    """ 
+    """
     Get (lat, long) coordintates from address
     Args:
         address: string with address
@@ -85,7 +90,12 @@ def get_location_from_hospitals(hospitals) -> Tuple[float, float]:
 # find the cloest route to hospital
 
 def get_nearest_hospital(hospital_points, origin):
-    min_distance = 0
+    if not hospital_points:
+        print("⚠️ No hospitals available for nearest search.")
+        return None, None
+
+    min_distance = float('inf')
+    closest_hospital = None
 
     for hospital in hospital_points:
         x1, y1 = hospital['geometry'].y, hospital['geometry'].x
@@ -97,11 +107,13 @@ def get_nearest_hospital(hospital_points, origin):
 
     print(f"Closest hospital: {closest_hospital['name']}")
 
+    if closest_hospital is None:
+        return None, None
 
     return (closest_hospital['geometry'].y, closest_hospital['geometry'].x), closest_hospital['name']
 
 
-
+import streamlit as st
 def get_graph(geo_orig, radius):
     """ 
     Convert the origin and destination addresses into (lat, long) coordinates and find the 
@@ -125,11 +137,17 @@ def get_graph(geo_orig, radius):
 
     location_orig = geo_orig
     hospitals = get_nearby_hospitals(location_orig[0], location_orig[1], radius=radius)
+    if hospitals is None or hospitals.empty:
+        return None, location_orig, None, [], "No hospital found"
     hospital_points = get_location_from_hospitals(hospitals)
     # keep the dict of hospitals point instead only extract geometry
     # hospitals_coordinates = [hospital['geometry'] for hospital in hospital_points]
     hospitals_coordinates = hospital_points
+    if not hospital_points:
+        return None, location_orig, None, [], "No hospital found"
     location_dest, hospital_name = get_nearest_hospital(hospital_points, location_orig)
+    if location_dest is None:
+        return None, location_orig, None, [], "No hospital found"
 
     print(f'Location orig: {location_orig}')
     print(f'Location dest: {location_dest}')

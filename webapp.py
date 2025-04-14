@@ -36,7 +36,7 @@ with st.sidebar:
     # transport = st.selectbox("Choose transport", TRAVEL_MODE)
     optimizer = st.selectbox("Choose optimizer", TRAVEL_OPTIMIZER)
 
-    # TODO: intergrate the emergency and availability options
+    # TODO: integrate the emergency and availability options
     emergency = st.toggle("Emergency?", value=False)
     availability = st.toggle("Check Availability?", value=False)
 
@@ -64,16 +64,29 @@ if 'last_radius' not in st.session_state:
     st.session_state.last_radius = radius
 
 if radius != st.session_state.last_radius:
-    # radius changed, update graph
-    graph, location_orig, location_dest, hospitals_coordinates, hospital_name = get_graph(neu_sv, radius)
+    # radius change, update the map
+    center_point = st.session_state.get("map_center", neu_sv)
+    graph, location_orig, location_dest, hospitals_coordinates, hospital_name = get_graph(center_point, radius)
+    if graph is None or location_dest is None:
+        st.session_state.markers = [{
+            'name': 'You are here',
+            'location': center_point,
+            'icon': folium.Icon(color='red', icon='suitcase', prefix='fa')
+        }]
+        st.warning(
+            "No hospitals found within the selected radius. Try increasing radius or selecting a different location.")
+        st.stop()
+
     st.session_state.markers = []
 
-    # fix the start maker miss issue when drag the radius
+    # mark start point:fix the start maker miss issue when drag the radius
     st.session_state.markers.append({
         'name': 'You are here',
         'location': (location_orig[0], location_orig[1]),
         'icon': folium.Icon(color='red', icon='suitcase', prefix='fa')  # 或 icon='flag'
     })
+
+    # mark the hospitals
     for hospital_point in hospitals_coordinates:
         name = hospital_point.get('name', 'Unnamed')
         geom = hospital_point['geometry']
@@ -82,8 +95,15 @@ if radius != st.session_state.last_radius:
             'location': (geom.y, geom.x),
             'icon': folium.Icon(color='blue', icon='plus', prefix='fa')
         })
+
+    # update the shortest path
+    route = find_shortest_path(graph, location_orig, location_dest, optimizer)
+    route_path = osmnx.routing.route_to_gdf(graph, route)
+    st.session_state.route_path = route_path
+
+    # update states
     st.session_state.last_radius = radius
-    st.session_state.map_center = neu_sv
+    st.session_state.map_center = center_point
     st.session_state.map_initialized = True
 
 
@@ -121,15 +141,22 @@ map_data = m.to_streamlit(height=500, bidirectional=True)
 geolocator = Nominatim(user_agent="streamlit-geocoder")
 
 # Check if the user has clicked on the map
-
 if map_data and map_data.get("last_clicked"):
+    last_click = map_data["last_clicked"]
+    if "lat" in last_click and "lng" in last_click:
+        lat = last_click["lat"]
+        lon = last_click["lng"]
     # Extract latitude and longitude from the click event
     lat = map_data["last_clicked"]["lat"]
     lon = map_data["last_clicked"]["lng"]
     # st.write(f"📍 Coordinates: ({lat:.5f}, {lon:.5f})")
 
     # Perform reverse geocoding to get the address
-    location = geolocator.reverse((lat, lon), exactly_one=True)
+    try:
+        location = geolocator.reverse((lat, lon), exactly_one=True, timeout=5)
+    except Exception as e:
+        st.error(f"⚠️ Reverse geocoding failed: {e}")
+        location = None
 
     if location:
         st.success(f"📫 Address: {location.address}")
@@ -139,6 +166,20 @@ if map_data and map_data.get("last_clicked"):
 
         # ===================
         graph, location_orig, location_dest, hospitals_coordinates, hospital_name = get_graph((lat, lon), radius)
+
+        # Check if the graph is None (no hospitals found will show in app )
+        if graph is None or location_dest is None :
+            st.session_state.map_center = (lat, lon)
+            st.session_state.markers = [{
+                'name': location.address,
+                'location': (lat, lon),
+                'icon': folium.Icon(color='red', icon='suitcase', prefix='fa')
+            }]
+            st.warning(
+                "No hospitals found within the selected radius. Try increasing radius or selecting a different location.")
+            st.stop()
+            # st.rerun()
+
         st.session_state.markers.append({
             'name': location.address,
             'location': location_orig,
