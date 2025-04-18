@@ -11,7 +11,7 @@ from unittest.mock import patch, MagicMock
 import sys
 import os
 sys.path.append(os.path.abspath("./app"))
-from locator import (
+from app.locator  import (
     get_nearby_hospitals,
     get_hospital_name,
     get_location_from_hospitals,

@@ -6,37 +6,55 @@ from networkx.classes.multidigraph import MultiDiGraph
 from osmnx._errors import InsufficientResponseError
 
 
-# get all hospitals in the area with bounding box
+# # get all hospitals in the area with bounding box
+# def get_nearby_hospitals(lat, lon, radius=1000, emergency=None):
+#     """
+#     Retrieves a list of hospital names within a specified radius of the given coordinates.
+#
+#     Parameters:
+#     - lat (float): Latitude of the location.
+#     - lon (float): Longitude of the location.
+#     - radius (int): Search radius in meters (default is 1000).
+#
+#     Returns:
+#     - List of hospital names.
+#     """
+#     # Define the tags for hospitals
+#     tags = {'amenity': 'hospital'}
+#     if emergency is True:
+#         tags['emergency'] = 'yes'
+#     elif emergency is False:
+#         tags['emergency'] = 'no'
+#
+#     # Retrieve hospital geometries within the specified radius
+#     try:
+#         hospitals = osmnx.features_from_point((lat, lon), tags=tags, dist=radius)
+#         return hospitals
+#     except InsufficientResponseError:
+#         print(f"⚠️ No hospital features found within {radius}m of ({lat}, {lon})")
+#         return None
+#
+#     # Extract hospital names
+#     # hospital_names = hospitals['name'].dropna().unique().tolist()
+#     # return hospitals
+
 def get_nearby_hospitals(lat, lon, radius=1000, emergency=None):
     """
-    Retrieves a list of hospital names within a specified radius of the given coordinates.
-
-    Parameters:
-    - lat (float): Latitude of the location.
-    - lon (float): Longitude of the location.
-    - radius (int): Search radius in meters (default is 1000).
-
-    Returns:
-    - List of hospital names.
+    Retrieves a list of hospitals within a specified radius and filters emergency if specified.
     """
-    # Define the tags for hospitals
     tags = {'amenity': 'hospital'}
-    if emergency is True:
-        tags['emergency'] = 'yes'
-    elif emergency is False:
-        tags['emergency'] = 'no'
 
-    # Retrieve hospital geometries within the specified radius
     try:
         hospitals = osmnx.features_from_point((lat, lon), tags=tags, dist=radius)
+        if hospitals is None or hospitals.empty:
+            return None
+        if emergency:
+            hospitals = hospitals[hospitals['emergency'] == 'yes']
         return hospitals
     except InsufficientResponseError:
         print(f"⚠️ No hospital features found within {radius}m of ({lat}, {lon})")
         return None
 
-    # Extract hospital names
-    # hospital_names = hospitals['name'].dropna().unique().tolist()
-    # return hospitals
 
 # get the name of the hospital
 def get_hospital_name(hospitals):
@@ -114,7 +132,9 @@ def get_nearest_hospital(hospital_points, origin):
 
 
 import streamlit as st
-def get_graph(geo_orig, radius):
+# def get_graph(geo_orig, radius):
+def get_graph(geo_orig, radius, emergency=None):
+
     """ 
     Convert the origin and destination addresses into (lat, long) coordinates and find the 
     graph of streets from the bounding box.
@@ -136,7 +156,9 @@ def get_graph(geo_orig, radius):
     # location_dest = get_location_from_address(address_dest)
 
     location_orig = geo_orig
-    hospitals = get_nearby_hospitals(location_orig[0], location_orig[1], radius=radius)
+    # hospitals = get_nearby_hospitals(location_orig[0], location_orig[1], radius=radius)
+    hospitals = get_nearby_hospitals(location_orig[0], location_orig[1], radius=radius, emergency=emergency)
+
     if hospitals is None or hospitals.empty:
         return None, location_orig, None, [], "No hospital found"
     hospital_points = get_location_from_hospitals(hospitals)

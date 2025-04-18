@@ -218,10 +218,16 @@ else:
     if 'last_radius' not in st.session_state:
         st.session_state.last_radius = radius
 
-    if radius != st.session_state.last_radius:
+    if 'last_emergency' not in st.session_state:
+        st.session_state.last_emergency = emergency
+
+    if radius != st.session_state.last_radius or emergency != st.session_state.last_emergency:
         # radius change, update the map
         center_point = st.session_state.get("map_center", neu_sv)
-        graph, location_orig, location_dest, hospitals_coordinates, hospital_name = get_graph(center_point, radius)
+        # graph, location_orig, location_dest, hospitals_coordinates, hospital_name = get_graph(center_point, radius)
+        graph, location_orig, location_dest, hospitals_coordinates, hospital_name = get_graph(center_point, radius,
+                                                                                              emergency=emergency)
+
         if graph is None or location_dest is None:
             st.session_state.markers = [{
                 'name': 'You are here',
@@ -260,7 +266,7 @@ else:
         st.session_state.last_radius = radius
         st.session_state.map_center = center_point
         st.session_state.map_initialized = True
-
+        st.session_state.last_emergency = emergency
 
     if 'default_mark' not in st.session_state:
         st.session_state.default_mark = []
@@ -317,7 +323,11 @@ else:
             st.session_state.markers = []
 
             # ===================
-            graph, location_orig, location_dest, hospitals_coordinates, hospital_name = get_graph((lat, lon), radius)
+            # graph, location_orig, location_dest, hospitals_coordinates, hospital_name = get_graph((lat, lon), radius)
+            graph, location_orig, location_dest, hospitals_coordinates, hospital_name = get_graph((lat, lon), radius,
+                                                                                                  emergency=emergency)
+            if emergency:
+                st.info("🚨 Showing only emergency-capable hospitals.")
 
             # Check if the graph is None (no hospitals found will show in app )
             if graph is None or location_dest is None :
